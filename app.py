@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime, date
 from supabase import create_client, Client
 import pytz
+import pandas as pd
 
 # --- Constants ---
 ADMIN_PASSWORD = "Verhuizing2025!"
@@ -12,7 +13,7 @@ tz = pytz.timezone("Europe/Amsterdam")
 now = datetime.now(tz)
 today = now.date()
 
-# --- Supabase Client Setup ---
+# --- Supabase Setup ---
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -64,33 +65,44 @@ if now.hour >= 17 or open_votes_override:
             elif total.count >= MAX_SPOTS:
                 st.warning("🚫 All 17 spots are full.")
             else:
-                # Insert the signup
                 response = supabase.table("strategy_signups").insert({
                     "name": name.strip(),
                     "date": str(today)
                 }).execute()
-
                 st.success("🎉 You're signed up!")
-                st.write("🛠️ Debug insert result:", response.data)
 
         except Exception as e:
             st.error(f"❌ Submission failed: {e}")
 else:
     st.info("🕔 Submissions open daily after 17:00 (Dutch time).")
 
-# --- Display Current Signups ---
+# --- Display Signups Table ---
 st.subheader("Confirmed for tomorrow:")
+
 try:
-    signups = supabase.table("strategy_signups") \
+    response = supabase.table("strategy_signups") \
         .select("*") \
         .eq("date", str(today)) \
         .order("created_at", desc=False) \
         .execute()
 
-    for entry in signups.data:
-        st.markdown(f"- {entry['name']}")
+    signups = response.data
 
-    spots_left = MAX_SPOTS - len(signups.data)
-    st.caption(f"🪑 {spots_left} spot(s) left for tomorrow.")
+    if not signups:
+        st.info("🙁 No one has signed up yet.")
+    else:
+        df = pd.DataFrame(signups)
+        df["created_at"] = pd.to_datetime(df["created_at"]).dt.strftime("%H:%M:%S")
+
+        df_display = df[["name", "created_at"]].rename(columns={
+            "name": "Name",
+            "created_at": "Submitted at"
+        })
+
+        st.dataframe(df_display, use_container_width=True)
+
+        spots_left = MAX_SPOTS - len(df_display)
+        st.markdown(f"🪑 **{spots_left} spot(s)** left for tomorrow")
+
 except Exception as e:
     st.error(f"❌ Failed to load signups: {e}")
