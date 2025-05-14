@@ -26,8 +26,8 @@ def get_weekdays():
 weekdays = get_weekdays()
 
 # --- User auth ---
-st.title("📅 Strategy Weekly Office Sign-Up")
-name = st.text_input("🧑 Your name:")
+st.title("🗓️ Strategy Weekly Office Sign-Up")
+name = st.text_input("🤝 Your name:")
 if not name.strip():
     st.stop()
 name = name.strip()
@@ -40,7 +40,7 @@ if st.sidebar.text_input("Password", type="password") == ADMIN_PASSWORD:
     st.sidebar.success("Admin access granted")
     if st.sidebar.button("🧼 Reset all signups"):
         supabase.table("strategy_signups").delete().execute()
-        st.experimental_rerun()
+        st.rerun()
 
 # --- Load all signups ---
 data = (
@@ -79,21 +79,16 @@ to_add = set(new_selection) - user_days
 to_remove = user_days - set(new_selection)
 
 if to_add or to_remove:
-    if st.button("💾 Save changes"):
-        # Add new
+    if st.button("📄 Save changes"):
         for d in to_add:
             if len(df[df["day"] == d]) < MAX_SPOTS:
-                supabase.table("strategy_signups").insert({
-                    "name": name,
-                    "day": str(d)
-                }).execute()
-        # Remove unchecked
+                supabase.table("strategy_signups").insert({"name": name, "day": str(d)}).execute()
         for d in to_remove:
             row = df[(df["name"] == name) & (df["day"] == d)]
             if not row.empty:
                 supabase.table("strategy_signups").delete().eq("id", row.iloc[0]["id"]).execute()
         st.success("✅ Preferences saved!")
-        st.experimental_rerun()
+        st.rerun()
 
 # --- Overview Table ---
 st.markdown("## 📋 Full Weekly Overview")
