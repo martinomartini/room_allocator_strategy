@@ -39,7 +39,7 @@ if st.sidebar.text_input("Password", type="password") == ADMIN_PASSWORD:
     admin_mode = True
     st.sidebar.success("Admin access granted")
     if st.sidebar.button("🧼 Reset all signups"):
-        supabase.table("strategy_signups").delete().execute()
+        supabase.table("strategy_signups").delete().neq("id", "").execute()
         st.rerun()
 
 # --- Load all signups ---
