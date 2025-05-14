@@ -10,6 +10,6 @@ supabase = create_client(url, key)
 
 today = str(date.today())
 
-# Delete all signups for today
-supabase.table("strategy_signups").delete().eq("date", today).execute()
+# Delete all signups for today — FIXED to use the correct column "day"
+supabase.table("strategy_signups").delete().eq("day", today).execute()
 print(f"✅ Reset complete for {today}")
