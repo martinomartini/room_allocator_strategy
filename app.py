@@ -1,12 +1,13 @@
 import streamlit as st
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 from supabase import create_client, Client
 import pytz
 import pandas as pd
 
-# --- Constants ---
+# --- Config ---
 ADMIN_PASSWORD = "Verhuizing2025!"
-MAX_SPOTS = 17
+MAX_SPOTS_PER_DAY = 17
+WEEK_START = 0  # Monday (0=Monday, 6=Sunday)
 
 # --- Timezone Setup ---
 tz = pytz.timezone("Europe/Amsterdam")
@@ -18,91 +19,82 @@ SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Page Config ---
-st.set_page_config(page_title="Strategy Room Allocator", page_icon="📍")
-st.title("📍 Strategy Office Attendance")
+# --- Page Setup ---
+st.set_page_config("📅 Strategy Weekly Planner", page_icon="📍")
+st.title("📅 Strategy Office Weekly Signup")
+
+# --- Get this week's weekdays (Mon–Fri) ---
+def get_weekdays():
+    start = today - timedelta(days=today.weekday())  # start of week
+    return [start + timedelta(days=i) for i in range(5)]
+
+weekdays = get_weekdays()
+
+# --- Auth ---
+name = st.text_input("Your name (for signup/unsubscribe):")
+if not name:
+    st.stop()
 
 # --- Admin Panel ---
 st.sidebar.title("🔐 Admin Panel")
 admin_mode = False
-open_votes_override = False
-
-admin_pwd = st.sidebar.text_input("Enter admin password", type="password")
+admin_pwd = st.sidebar.text_input("Admin password", type="password")
 if admin_pwd == ADMIN_PASSWORD:
-    st.sidebar.success("Admin access granted ✅")
     admin_mode = True
+    st.sidebar.success("✅ Admin access granted")
+    if st.sidebar.button("🧼 Reset all signups (week)"):
+        supabase.table("strategy_signups").delete().execute()
+        st.sidebar.success("✅ All signups cleared")
 
-    if st.sidebar.button("🧼 Reset today's submissions"):
-        try:
-            supabase.table("strategy_signups").delete().eq("date", str(today)).execute()
-            st.sidebar.success("✅ Submissions cleared")
-        except Exception as e:
-            st.sidebar.error(f"❌ Reset failed: {e}")
+# --- Load signups for the week ---
+signups = (
+    supabase.table("strategy_signups")
+    .select("*")
+    .gte("day", str(weekdays[0]))
+    .lte("day", str(weekdays[-1]))
+    .execute()
+    .data
+)
 
-    open_votes_override = st.sidebar.toggle("🟢 Force-open voting window", value=False)
-
-# --- Submission Form ---
-if now.hour >= 14 or open_votes_override:
-    name = st.text_input("Enter your name to sign up:")
-
-    if name:
-        try:
-            # Check if already signed up
-            existing = supabase.table("strategy_signups") \
-                .select("*") \
-                .eq("date", str(today)) \
-                .eq("name", name.strip()) \
-                .execute()
-
-            # Count total signups
-            total = supabase.table("strategy_signups") \
-                .select("*", count="exact") \
-                .eq("date", str(today)) \
-                .execute()
-
-            if existing.data:
-                st.info("✅ You already signed up.")
-            elif total.count >= MAX_SPOTS:
-                st.warning("🚫 All 17 spots are full.")
-            else:
-                response = supabase.table("strategy_signups").insert({
-                    "name": name.strip(),
-                    "date": str(today)
-                }).execute()
-                st.success("🎉 You're signed up!")
-
-        except Exception as e:
-            st.error(f"❌ Submission failed: {e}")
+df = pd.DataFrame(signups)
+if not df.empty:
+    df["day"] = pd.to_datetime(df["day"]).dt.date
 else:
-    st.info("🕔 Submissions open daily after 17:00 (Dutch time).")
+    df = pd.DataFrame(columns=["id", "name", "day", "created_at"])
 
-# --- Display Signups Table ---
-st.subheader("Confirmed for tomorrow:")
+# --- Render signup table ---
+cols = st.columns(len(weekdays))
+for i, day in enumerate(weekdays):
+    day_signups = df[df["day"] == day]
+    user_signed_up = not day_signups[day_signups["name"] == name].empty
+    spots_left = MAX_SPOTS_PER_DAY - len(day_signups)
 
-try:
-    response = supabase.table("strategy_signups") \
-        .select("*") \
-        .eq("date", str(today)) \
-        .order("created_at", desc=False) \
-        .execute()
+    with cols[i]:
+        st.markdown(f"### {day.strftime('%a %d %b')}")
+        st.markdown(f"**🪑 {spots_left} spots left**")
 
-    signups = response.data
+        if user_signed_up:
+            if st.button(f"❌ Unsubscribe", key=f"uns_{i}"):
+                row_id = day_signups[day_signups["name"] == name]["id"].values[0]
+                supabase.table("strategy_signups").delete().eq("id", row_id).execute()
+                st.experimental_rerun()
+        elif spots_left > 0:
+            if st.button("✅ Sign up", key=f"sub_{i}"):
+                supabase.table("strategy_signups").insert({
+                    "name": name.strip(),
+                    "day": str(day)
+                }).execute()
+                st.experimental_rerun()
+        else:
+            st.warning("Full")
 
-    if not signups:
-        st.info("🙁 No one has signed up yet.")
-    else:
-        df = pd.DataFrame(signups)
-        df["created_at"] = pd.to_datetime(df["created_at"]).dt.strftime("%H:%M:%S")
-
-        df_display = df[["name", "created_at"]].rename(columns={
-            "name": "Name",
-            "created_at": "Submitted at"
-        })
-
-        st.dataframe(df_display, use_container_width=True)
-
-        spots_left = MAX_SPOTS - len(df_display)
-        st.markdown(f"🪑 **{spots_left} spot(s)** left for tomorrow")
-
-except Exception as e:
-    st.error(f"❌ Failed to load signups: {e}")
+# --- Weekly overview table ---
+st.markdown("### 📋 Full Weekly Overview")
+if df.empty:
+    st.info("No signups yet.")
+else:
+    pivot = df.pivot_table(index="name", columns="day", aggfunc="size", fill_value=0)
+    pivot = pivot.reindex(columns=weekdays, fill_value=0)
+    pivot.columns = [d.strftime("%a") for d in weekdays]
+    pivot = pivot.replace({1: "✅", 0: ""})
+    st.dataframe(pivot)
