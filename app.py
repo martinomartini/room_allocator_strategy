@@ -18,22 +18,27 @@ SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Get this week's weekdays (Mon–Fri) ---
+# --- Get this week's and next week's weekdays (Mon–Fri) ---
 def get_weekdays():
-    start = today - timedelta(days=today.weekday())
-    return [start + timedelta(days=i) for i in range(5)]
+    start = today - timedelta(days=today.weekday())  # start from Monday this week
+    return [start + timedelta(days=i) for i in range(10) if (start + timedelta(days=i)).weekday() < 5]
 
 weekdays = get_weekdays()
 
 # --- Intro ---
-st.title("🗓️ Strategy Weekly Office Sign-Up")
+st.title("🗓️ Strategy Oasis Sign-Up Tool")
+
 st.markdown("""
-Welcome to the Strategy Office Signup Tool!
-Here you can select the days you plan to work from the office during the current week.
-- ✅ Select your name
-- 📅 Choose which weekdays you will be present
-- 🧼 Admins can reset all signups from the sidebar
-- ⛔ Spots are limited to 17 per day
+Welcome to the **Strategy Oasis sign-up tool** for reserving your seat in rooms **D2.82**, **D2.83**, and **3 spots in D2.21**.
+
+Here’s how it works:
+
+- ✅ Enter your name
+- 📅 Choose **maximum 2 days per week** that you plan to work from the office (you can plan up to 2 weeks ahead)
+- ❌ Changed your mind? Just unselect your chosen day
+- 📄 For **Project Rooms**, please use the **A4 paper sheets** on the door to book
+- 🧼 Admins can reset all signups using the sidebar (with password)
+- ⛔ Each day is limited to **17 spots**
 """)
 
 # --- User auth ---
@@ -65,7 +70,7 @@ df = pd.DataFrame(data) if data else pd.DataFrame(columns=["id", "name", "day", 
 df["day"] = pd.to_datetime(df["day"]).dt.date
 
 # --- Weekly checkbox grid ---
-st.markdown("## 🗓️ Select your office days this week")
+st.markdown("## 🗓️ Select your office days")
 
 # Track what user has checked
 user_days = set(df[df["name"] == name]["day"])
@@ -101,13 +106,13 @@ if to_add or to_remove:
         st.rerun()
 
 # --- Overview Table ---
-st.markdown("## 📋 Full Weekly Overview")
+st.markdown("## 📋 Full Overview")
 if df.empty:
     st.info("No one has signed up yet.")
 else:
     pivot = df.pivot_table(index="name", columns="day", aggfunc="size", fill_value=0)
     pivot = pivot.reindex(columns=weekdays, fill_value=0)
-    pivot.columns = [d.strftime("%a") for d in weekdays]
+    pivot.columns = [d.strftime("%a %d") for d in weekdays]
     pivot = pivot.replace({1: "✅", 0: ""})
     st.dataframe(pivot, use_container_width=True)
 
