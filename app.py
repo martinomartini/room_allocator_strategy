@@ -25,8 +25,18 @@ def get_weekdays():
 
 weekdays = get_weekdays()
 
-# --- User auth ---
+# --- Intro ---
 st.title("🗓️ Strategy Weekly Office Sign-Up")
+st.markdown("""
+Welcome to the Strategy Office Signup Tool!
+Here you can select the days you plan to work from the office during the current week.
+- ✅ Select your name
+- 📅 Choose which weekdays you will be present
+- 🧼 Admins can reset all signups from the sidebar
+- ⛔ Spots are limited to 17 per day
+""")
+
+# --- User auth ---
 name = st.text_input("🤝 Your name:")
 if not name.strip():
     st.stop()
@@ -100,3 +110,7 @@ else:
     pivot.columns = [d.strftime("%a") for d in weekdays]
     pivot = pivot.replace({1: "✅", 0: ""})
     st.dataframe(pivot, use_container_width=True)
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("Made by **Martino Martini** ✨")
