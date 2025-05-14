@@ -20,8 +20,8 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Get this week's and next week's weekdays (Mon–Fri) ---
 def get_weekdays():
-    start = today - timedelta(days=today.weekday())  # start from Monday this week
-    return [start + timedelta(days=i) for i in range(10) if (start + timedelta(days=i)).weekday() < 5]
+    start = today - timedelta(days=today.weekday())
+    return [start + timedelta(days=i) for i in range(14) if (start + timedelta(days=i)).weekday() < 5]
 
 weekdays = get_weekdays()
 
@@ -33,11 +33,11 @@ Welcome to the **Strategy Oasis sign-up tool** for reserving your seat in rooms 
 
 Here’s how it works:
 
-- ✅ Enter your name
-- 📅 Choose **maximum 2 days per week** that you plan to work from the office (you can plan up to 2 weeks ahead)
-- ❌ Changed your mind? Just unselect your chosen day
-- 📄 For **Project Rooms**, please use the **A4 paper sheets** on the door to book
-- 🧼 Admins can reset all signups using the sidebar (with password)
+- ✅ Select your name
+- 📅 Choose which weekdays you will be present — **max 2 days per week**
+- ❌ If you decide not to be there, please unselect your presence
+- 📄 For **Project Rooms**, use the **A4 paper sheets** on the door to book
+- 🧼 Admins can reset all signups using the sidebar
 - ⛔ Each day is limited to **17 spots**
 """)
 
@@ -106,7 +106,7 @@ if to_add or to_remove:
         st.rerun()
 
 # --- Overview Table ---
-st.markdown("## 📋 Full Overview")
+st.markdown("## 📋 Full Weekly Overview")
 if df.empty:
     st.info("No one has signed up yet.")
 else:
