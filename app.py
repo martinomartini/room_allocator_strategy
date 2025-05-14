@@ -42,7 +42,7 @@ if admin_pwd == ADMIN_PASSWORD:
     open_votes_override = st.sidebar.toggle("🟢 Force-open voting window", value=False)
 
 # --- Submission Form ---
-if now.hour >= 17 or open_votes_override:
+if now.hour >= 14 or open_votes_override:
     name = st.text_input("Enter your name to sign up:")
 
     if name:
