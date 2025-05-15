@@ -83,11 +83,14 @@ for i, d in enumerate(weekdays):
         day_str = d.strftime("%a %d %b")
         current_signups = df[df["day"] == d]
         spots_left = MAX_SPOTS - len(current_signups)
-        st.markdown(f"**{day_str}**")
-        st.caption(f"🪑 {spots_left} spots left")
+        st.markdown(f"<div style='text-align: center; font-weight: bold'>{day_str}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; font-size: 0.85em'>🪑 {spots_left} spots left</div>", unsafe_allow_html=True)
+        
         checked = d in user_days
-        if st.checkbox("Going", key=f"chk_{i}", value=checked):
+        is_going = st.checkbox("", key=f"chk_{i}", value=checked)
+        if is_going:
             new_selection.append(d)
+
 
 # --- Apply changes ---
 to_add = set(new_selection) - user_days
