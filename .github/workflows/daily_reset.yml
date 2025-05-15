@@ -1,26 +1,26 @@
-name: Daily Reset at 17:00 CET
+# name: Daily Reset at 17:00 CET
 
-on:
-  schedule:
-    - cron: '0 12 * * *'  # 15:00 UTC = 17:00 CET
+# on:
+#   schedule:
+#     - cron: '0 12 * * *'  # 15:00 UTC = 17:00 CET
 
-jobs:
-  reset:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+# jobs:
+#   reset:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install supabase
+#       - name: Install dependencies
+#         run: pip install supabase
 
-      - name: Run reset script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python reset.py
+#       - name: Run reset script
+#         env:
+#           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+#           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+#         run: python reset.py
